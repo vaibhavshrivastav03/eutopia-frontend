@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>EUTOPIA ID — Bracelet</title>
+<style>
+  :root{
+    --bg0:#020509;
+    --bg1:#07101e;
+    --pink:#ff4d9e;
+    --pink-soft:#ff86c0;
+    --cyan:#37c6f4;
+    --cyan-soft:#8fe3ff;
+    --ink:#dceaff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:"Segoe UI",Inter,system-ui,Arial,sans-serif;}
+  #stage{position:fixed;inset:0;}
+  canvas{display:block;width:100%;height:100%;}
+
+  /* transparent: no vignette / grid backdrop (sits on your Figma background) */
+
+  /* ---------- holographic UI overlay ---------- */
+  #ui{position:absolute;inset:0;z-index:3;pointer-events:none;color:#cfeaff;}
+  .holo{position:absolute;}
+
+  /* main data panel (upper-center-left) */
+  #panel{
+    left:21%;top:11%;width:46%;max-width:560px;min-width:300px;
+    filter:drop-shadow(0 0 18px rgba(60,170,230,.25));
+    animation:floatUI 6s ease-in-out infinite;
+    opacity:0;transition:opacity .8s ease;
+  }
+  #panel.reveal{opacity:1;}
+  .panel-grid{
+    display:grid;grid-template-columns:1.35fr .9fr;gap:0 18px;
+    padding:14px 16px 12px;
+    border:1px solid rgba(120,200,255,.28);
+    border-radius:6px;
+    background:linear-gradient(180deg, rgba(20,46,74,.30), rgba(8,20,36,.14));
+    backdrop-filter:blur(2px);
+  }
+  .pct{
+    grid-column:1 / 2;display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .segbar{display:flex;gap:3px;flex:1;height:16px;margin-right:12px;}
+  .seg{flex:1;border-radius:1px;background:rgba(120,170,210,.16);transition:background .25s,box-shadow .25s;}
+  .seg.on{background:linear-gradient(180deg,var(--pink-soft),var(--pink));box-shadow:0 0 6px rgba(255,90,160,.8);}
+  .seg.tip{background:linear-gradient(180deg,#fff,var(--cyan));box-shadow:0 0 8px rgba(120,220,255,.9);}
+  .pctnum{font-weight:700;font-size:22px;letter-spacing:.5px;color:#eaf6ff;text-shadow:0 0 10px rgba(120,210,255,.6);}
+
+  .worldwrap{grid-column:2 / 3;grid-row:1 / 3;display:flex;align-items:flex-start;justify-content:flex-end;}
+  #worldmap{width:150px;height:78px;opacity:.95;}
+
+  .iconrow{grid-column:1 / 2;display:flex;align-items:center;gap:14px;margin:2px 0 8px;}
+  .iconrow svg{filter:drop-shadow(0 0 6px rgba(120,210,255,.55));}
+  .minibar{width:120px;height:9px;border-radius:2px;background:rgba(120,170,210,.16);overflow:hidden;}
+  .minibar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pink),var(--pink-soft));box-shadow:0 0 8px rgba(255,90,160,.8);}
+
+  .datasync{grid-column:2 / 3;align-self:end;justify-self:end;text-align:right;line-height:1.05;}
+  .datasync .lbl{font-size:11px;letter-spacing:3px;color:#bfe6ff;opacity:.8;}
+  .datasync .val{font-size:15px;letter-spacing:2px;font-weight:700;color:#eafaff;text-shadow:0 0 10px rgba(120,220,255,.7);animation:blink 1.6s ease-in-out infinite;}
+
+  .hexwrap{
+    grid-column:1 / 2;margin-top:6px;height:64px;overflow:hidden;position:relative;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent);
+            mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent);
+  }
+  .hexscroll{position:absolute;left:0;top:0;animation:scrollHex 9s linear infinite;}
+  .hexline{font-family:"Courier New",monospace;font-size:10px;letter-spacing:.5px;color:rgba(150,205,235,.55);white-space:nowrap;line-height:1.45;}
+  .hexline.lead{color:#cfe7fb;font-weight:700;letter-spacing:1px;text-shadow:0 0 8px rgba(120,200,255,.5);}
+
+  /* IDENTITY big label upper-right */
+  #identity{
+    right:6.5%;top:16%;font-size:30px;letter-spacing:6px;font-weight:600;
+    color:#39b9ec;text-shadow:0 0 16px rgba(45,160,230,.8);
+    animation:floatUI 6.5s ease-in-out infinite;
+    opacity:0;transition:opacity .8s ease;
+  }
+  #identity.reveal{opacity:1;}
+
+  /* right-side mini list */
+  #list{right:9%;top:38%;display:flex;flex-direction:column;gap:11px;animation:floatUI 7s ease-in-out infinite;}
+  .li{display:flex;align-items:center;gap:9px;font-size:12px;letter-spacing:2px;color:#cfeaff;opacity:0;transform:translateX(8px);}
+  .li.show{opacity:1;transform:translateX(0);transition:all .5s ease;}
+  .li svg{filter:drop-shadow(0 0 5px rgba(255,120,180,.6));}
+
+  /* gemini-style spark bottom right */
+  #spark{right:4%;bottom:5%;color:#bcdcff;opacity:.85;animation:twinkle 3s ease-in-out infinite;}
+
+  @keyframes scrollHex{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
+  @keyframes floatUI{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @keyframes twinkle{0%,100%{opacity:.4;transform:scale(.9)}50%{opacity:1;transform:scale(1.08)}}
+
+  @media (max-width:760px){
+    #panel{left:6%;top:8%;width:62%;}
+    #identity{font-size:20px;letter-spacing:4px;right:5%;top:10%;}
+    #worldmap{width:108px;height:58px;}
+    #list{right:5%;}
+    .pctnum{font-size:18px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <!-- WebGL canvas injected here -->
+  <div id="ui">
+    <!-- DATA PANEL -->
+    <div id="panel" class="holo">
+      <div class="panel-grid">
+        <div class="pct">
+          <div class="segbar" id="segbar"></div>
+          <div class="pctnum"><span id="pctnum">0</span>%</div>
+        </div>
+
+        <div class="worldwrap"><canvas id="worldmap" width="300" height="156"></canvas></div>
+
+        <div class="iconrow">
+          <!-- cloud sync -->
+          <svg width="34" height="26" viewBox="0 0 34 26" fill="none">
+            <path d="M9 21h15a6 6 0 0 0 .7-11.96A8 8 0 0 0 9.2 8.2 5.5 5.5 0 0 0 9 21Z" stroke="#7fd2f5" stroke-width="1.4"/>
+            <path d="M17 16.5V9m0 0-2.4 2.6M17 9l2.4 2.6" stroke="#ff7ab6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M17 11.5V19m0 0 2.4-2.6M17 19l-2.4-2.6" stroke="#7fd2f5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="minibar"><i id="minibar"></i></div>
+        </div>
+
+        <div class="datasync">
+          <!-- satellite -->
+          <svg width="30" height="22" viewBox="0 0 30 22" fill="none" style="margin-bottom:4px">
+            <path d="M6 12 12 6m-3 3 4 4m4-10 5 5m-2.5-2.5L20 8" stroke="#9fdcff" stroke-width="1.3"/>
+            <rect x="3.5" y="9.5" width="5" height="5" rx="1" transform="rotate(45 6 12)" stroke="#9fdcff" stroke-width="1.3"/>
+            <rect x="15.5" y="9.5" width="5" height="5" rx="1" transform="rotate(45 18 12)" stroke="#9fdcff" stroke-width="1.3"/>
+            <path d="M22 4a6 6 0 0 1 4 4M22.5 8a2.5 2.5 0 0 1 1.5 1.5" stroke="#ff7ab6" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <div class="lbl">DATASYNC</div>
+          <div class="val">ACTIVE</div>
+        </div>
+
+        <div class="hexwrap">
+          <div class="hexscroll" id="hexscroll"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IDENTITY -->
+    <div id="identity" class="holo">IDENTITY</div>
+
+    <!-- mini list -->
+    <div id="list" class="holo">
+      <div class="li" data-d="0">
+        <svg width="14" height="16" viewBox="0 0 14 16" fill="none"><path d="M7 1C4.2 1 2 3.2 2 6c0 3.6 5 9 5 9s5-5.4 5-9c0-2.8-2.2-5-5-5Z" stroke="#ff7ab6" stroke-width="1.3"/><circle cx="7" cy="6" r="1.8" stroke="#ff7ab6" stroke-width="1.3"/></svg>
+        LOCATION
+      </div>
+      <div class="li" data-d="1">
+        <svg width="16" height="14" viewBox="0 0 16 14" fill="none"><path d="M8 12.5S1.5 8.7 1.5 4.6A3.1 3.1 0 0 1 8 3a3.1 3.1 0 0 1 6.5 1.6C14.5 8.7 8 12.5 8 12.5Z" stroke="#ff7ab6" stroke-width="1.3"/><path d="M2 7h3l1.3-2.5L8 9l1.5-3 1 1H14" stroke="#9fdcff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        HEART RATE
+      </div>
+      <div class="li" data-d="2">
+        <svg width="14" height="16" viewBox="0 0 14 16" fill="none"><circle cx="7" cy="4.5" r="3" stroke="#ff7ab6" stroke-width="1.3"/><path d="M1.5 15c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="#ff7ab6" stroke-width="1.3" stroke-linecap="round"/></svg>
+        IDENTITY
+      </div>
+    </div>
+
+    <!-- spark -->
+    <svg id="spark" class="holo" width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <path d="M13 0c.6 6.4 6.6 12.4 13 13-6.4.6-12.4 6.6-13 13-.6-6.4-6.6-12.4-13-13C6.4 12.4 12.4 6.4 13 0Z" fill="#bcdcff"/>
+    </svg>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============ THREE SETUP ============ */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+stage.insertBefore(renderer.domElement, document.getElementById('ui'));
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 0.2, 9.2);
+
+/* ---- environment map (procedural) so silver picks up scene colors ---- */
+function makeEnvTexture(){
+  const c = document.createElement('canvas'); c.width=512; c.height=256;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0,0,512,256);
+  grd.addColorStop(0,'#0a1830'); grd.addColorStop(.5,'#13243f'); grd.addColorStop(1,'#06101f');
+  g.fillStyle=grd; g.fillRect(0,0,512,256);
+  // glowing color blobs that reflect on metal
+  function blob(x,y,r,col){const rg=g.createRadialGradient(x,y,0,x,y,r);rg.addColorStop(0,col);rg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=rg;g.fillRect(0,0,512,256);}
+  blob(120,150,150,'rgba(255,80,160,.85)');
+  blob(400,90,160,'rgba(55,200,245,.85)');
+  blob(260,40,120,'rgba(255,255,255,.55)');
+  blob(300,230,140,'rgba(60,120,255,.6)');
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.encoding = THREE.sRGBEncoding;
+  return tex;
+}
+const envTex = makeEnvTexture();
+scene.environment = envTex;
+
+/* ---- lights ---- */
+scene.add(new THREE.AmbientLight(0x33506e, 0.7));
+const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(2,4,5); scene.add(key);
+const pink = new THREE.PointLight(0xff3f96, 2.4, 22); pink.position.set(-3.2,-0.5,2.5); scene.add(pink);
+const cyan = new THREE.PointLight(0x33c6f4, 2.4, 22); cyan.position.set(3.4,1.2,2.2); scene.add(cyan);
+const under = new THREE.PointLight(0x4f7bff, 1.6, 16); under.position.set(0,-1.6,1.5); scene.add(under);
+
+/* ============ BRACELET ============ */
+const bracelet = new THREE.Group();
+scene.add(bracelet);
+bracelet.rotation.x = 0.62;          // tilt to read as an ellipse like the reference
+bracelet.position.y = -0.15;
+
+const silver = new THREE.MeshStandardMaterial({
+  color:0xc9d2dc, metalness:1.0, roughness:0.22, envMap:envTex, envMapIntensity:1.5
+});
+
+const R = 2.55;                       // bracelet radius
+const LINKS = 46;
+const ringR = 0.235, tubeR = 0.072;
+const linkGeo = new THREE.TorusGeometry(ringR, tubeR, 14, 30);
+
+for(let i=0;i<LINKS;i++){
+  const th = (i/LINKS)*Math.PI*2;
+  const link = new THREE.Mesh(linkGeo, silver);
+  link.position.set(Math.cos(th)*R, 0, Math.sin(th)*R);
+  link.rotation.y = -th;             // follow the circle tangent
+  link.rotation.x = Math.PI/2;
+  if(i%2===0) link.rotation.z = Math.PI/2;   // alternate links 90° -> interlocked chain look
+  bracelet.add(link);
+}
+
+/* ---- heart charm (hangs at front-bottom) ---- */
+const heartGroup = new THREE.Group();
+// front-bottom point of the tilted ring, in bracelet-local space:
+heartGroup.position.set(0, 0, R);
+bracelet.add(heartGroup);
+
+// connector ring linking chain to heart bezel
+const conn = new THREE.Mesh(new THREE.TorusGeometry(0.14,0.05,12,24), silver);
+conn.position.set(0,-0.16,0.05);
+heartGroup.add(conn);
+
+// heart shape
+const hs = new THREE.Shape();
+const x=0,y=0;
+hs.moveTo(x,y+0.25);
+hs.bezierCurveTo(x,y+0.25, x-0.05,y+0.55, x-0.5,y+0.55);
+hs.bezierCurveTo(x-1.1,y+0.55, x-1.1,y-0.15, x-1.1,y-0.15);
+hs.bezierCurveTo(x-1.1,y-0.55, x-0.65,y-1.0, x,y-1.35);
+hs.bezierCurveTo(x+0.65,y-1.0, x+1.1,y-0.55, x+1.1,y-0.15);
+hs.bezierCurveTo(x+1.1,y-0.15, x+1.1,y+0.55, x+0.5,y+0.55);
+hs.bezierCurveTo(x+0.05,y+0.55, x,y+0.25, x,y+0.25);
+
+const heartGeo = new THREE.ExtrudeGeometry(hs, {depth:0.28, bevelEnabled:true, bevelThickness:0.07, bevelSize:0.08, bevelSegments:4, steps:1});
+heartGeo.center();
+heartGeo.scale(0.62,0.62,0.62);
+
+// pink glossy material for the heart body
+const heartPink = new THREE.MeshStandardMaterial({
+  color:0xff4f86, metalness:0.55, roughness:0.18, envMap:envTex, envMapIntensity:1.2,
+  emissive:0x3a0a1c, emissiveIntensity:0.5
+});
+const heart = new THREE.Mesh(heartGeo, [heartPink, silver]);  // face + bevel
+heart.position.set(0,-0.72,0.18);
+heart.rotation.x = -0.25;
+heartGroup.add(heart);
+
+// silver rim plate behind face (gives the bezel look)
+const rim = new THREE.Mesh(heartGeo, silver);
+rim.position.copy(heart.position);
+rim.position.z -= 0.06;
+rim.rotation.copy(heart.rotation);
+rim.scale.set(1.08,1.08,0.6);
+heartGroup.add(rim);
+
+/* ---- "EUTOPIA ♥ ID" text on the heart face (canvas texture) ---- */
+function heartTextTexture(){
+  const c=document.createElement('canvas'); c.width=256;c.height=256;
+  const g=c.getContext('2d');
+  g.clearRect(0,0,256,256);
+  g.fillStyle='rgba(60,8,28,0.0)';
+  g.textAlign='center'; g.fillStyle='#2a0716';
+  g.font='600 30px Georgia, serif';
+  g.fillText('EUTOPIA',128,108);
+  g.font='600 30px Georgia, serif';
+  g.fillText('ID',128,182);
+  // small heart between
+  g.fillStyle='#7a0e2e';
+  g.font='26px serif';
+  g.fillText('♥',128,150);
+  const t=new THREE.CanvasTexture(c); t.anisotropy=4; return t;
+}
+const textPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.95,0.95),
+  new THREE.MeshBasicMaterial({map:heartTextTexture(), transparent:true, depthWrite:false})
+);
+textPlane.position.set(0,-0.66,0.36);
+textPlane.rotation.x = -0.25;
+heartGroup.add(textPlane);
+
+/* ============ GLOWING RINGS (removed entirely per request) ============ */
+const ringsGroup = new THREE.Group();
+ringsGroup.rotation.x = 0.62;
+ringsGroup.position.y = -0.15;
+scene.add(ringsGroup);
+
+/* ============ CENTRAL LIGHT BURST (heartbeat) ============ */
+function radialSprite(color, size){
+  const c=document.createElement('canvas');c.width=c.height=256;
+  const g=c.getContext('2d');
+  const rg=g.createRadialGradient(128,128,0,128,128,128);
+  rg.addColorStop(0,color); rg.addColorStop(0.25,color.replace('1)','0.6)')); rg.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=rg; g.fillRect(0,0,256,256);
+  const tex=new THREE.CanvasTexture(c);
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});
+  const s=new THREE.Sprite(mat); s.scale.set(size,size,1); return s;
+}
+const burst = radialSprite('rgba(120,200,255,1)', 4.2);
+burst.position.set(0,-0.55,0.5);   // soft projection glow on the heart
+heartGroup.add(burst);
+
+/* (dust particles removed for clean transparent compositing) */
+
+/* ============ MOUSE PARALLAX ============ */
+let mx=0,my=0,tmx=0,tmy=0;
+addEventListener('pointermove',e=>{tmx=(e.clientX/innerWidth-0.5);tmy=(e.clientY/innerHeight-0.5);});
+
+/* ============ ANIMATE ============ */
+const clock=new THREE.Clock();
+let introT0=null, uiStarted=false;
+function animate(){
+  requestAnimationFrame(animate);
+  const t=clock.getElapsedTime();
+  const k = REDUCED?0:1;
+
+  // bracelet gentle rock + float (keeps heart at front, faithful to image)
+  bracelet.rotation.y = Math.sin(t*0.35)*0.45*k;
+  bracelet.position.y = -0.15 + Math.sin(t*0.8)*0.06*k;
+  ringsGroup.position.y = bracelet.position.y;
+
+  // heart sway (slight lag physics)
+  heartGroup.rotation.z = Math.sin(t*1.1 - 0.4)*0.08*k;
+
+  // (rings removed — no rotation needed)
+
+  // INTRO: light pulses up through the heart, then the burst reveals the panel
+  if(introT0===null) introT0 = t;
+  const introP = REDUCED ? 1 : Math.min((t-introT0)/1.4, 1);
+  const eo = 1-Math.pow(1-introP,3);                 // easeOutCubic
+
+  const beat = Math.pow(Math.max(0,Math.sin(t*1.6)),6) + 0.5*Math.pow(Math.max(0,Math.sin(t*1.6-0.5)),6);
+
+  if(introP<1){
+    // burst powers up under the heart
+    const bs = eo*6.4;
+    burst.scale.set(bs,bs,1);
+    burst.material.opacity = eo*0.85;
+    under.intensity = 1.4 + eo*3.0;
+  } else {
+    // settle into gentle heartbeat
+    const s = 4.0 + beat*1.1;
+    burst.scale.set(s,s,1);
+    burst.material.opacity = 0.4 + beat*0.35;
+    under.intensity = 1.4 + beat*1.4;
+  }
+
+  // once the burst peaks, reveal the holographic UI / DATASYNC card
+  if(introP>=1 && !uiStarted){ uiStarted=true; startUISequence(); }
+
+  // breathing point lights
+  pink.intensity = 2.2 + Math.sin(t*1.3)*0.5*k;
+  cyan.intensity = 2.2 + Math.sin(t*1.3+2)*0.5*k;
+
+  // (dust removed)
+
+  // camera parallax
+  mx+=(tmx-mx)*0.05; my+=(tmy-my)*0.05;
+  camera.position.x = mx*0.8;
+  camera.position.y = 0.2 - my*0.5;
+  camera.lookAt(0,-0.1,0);
+
+  renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+/* ============ UI: build segments, hex stream, world map, list ============ */
+// segmented progress bar -> 72%
+const SEGS=34, TARGET=72;
+const segbar=document.getElementById('segbar');
+for(let i=0;i<SEGS;i++){const d=document.createElement('div');d.className='seg';segbar.appendChild(d);}
+const segEls=[...segbar.children];
+const pctnum=document.getElementById('pctnum');
+const minibar=document.getElementById('minibar');
+
+// hex stream
+const hexChars='0123456789ABCDEF';
+function hex(n){let s='';for(let i=0;i<n;i++)s+=hexChars[Math.random()*16|0];return s;}
+function hexLine(){const a=hex(6),b=hex(6),c=hex(6),d=hex(6);return `${a}.${b}.${c}.${d}`;}
+const hs2=document.getElementById('hexscroll');
+function buildHex(){
+  let html=`<div class="hexline lead">SYNCING_72%_ENCRYPTED_0RAF9B...</div>`;
+  for(let i=0;i<10;i++) html+=`<div class="hexline">${hexLine()} ${hex(4)}TSF ${hex(6)} ${hex(4)}AE..</div>`;
+  return html;
+}
+hs2.innerHTML = buildHex()+buildHex(); // doubled for seamless loop
+
+// world map dotted (two landmass-ish clusters, blinking)
+const wm=document.getElementById('worldmap'); const wctx=wm.getContext('2d');
+const dots=[];
+function inLand(x,y){ // crude two-blob continents
+  const a=Math.hypot((x-95)/70,(y-78)/52)<1;          // left mass
+  const b=Math.hypot((x-205)/85,(y-72)/55)<1;          // right mass
+  const c=Math.hypot((x-150)/30,(y-120)/22)<1;         // lower bridge
+  return a||b||c;
+}
+for(let x=8;x<300;x+=9){for(let y=8;y<156;y+=9){ if(inLand(x,y)&&Math.random()<0.82){dots.push({x,y,p:Math.random()*Math.PI*2});}}}
+function drawMap(t){
+  wctx.clearRect(0,0,300,156);
+  for(const d of dots){
+    const a=0.35+0.65*Math.abs(Math.sin(t*1.5+d.p));
+    wctx.fillStyle=`rgba(120,210,255,${REDUCED?0.7:a})`;
+    wctx.beginPath();wctx.arc(d.x,d.y,1.6,0,7);wctx.fill();
+  }
+}
+(function loopMap(){drawMap(clock.getElapsedTime());requestAnimationFrame(loopMap);})();
+
+// ---- reveal sequence, triggered after the heart-ray burst ----
+function startUISequence(){
+  document.getElementById('panel').classList.add('reveal');
+  document.getElementById('identity').classList.add('reveal');
+
+  // progress fill 0 -> 72
+  if(REDUCED){
+    pctnum.textContent=TARGET;
+    const lit=Math.round(SEGS*TARGET/100);
+    segEls.forEach((s,i)=>s.classList.toggle('on',i<lit));
+    minibar.style.width=TARGET+'%';
+  } else {
+    let cur=0;
+    const fill=setInterval(()=>{
+      cur++; if(cur>TARGET){clearInterval(fill);return;}
+      pctnum.textContent=cur;
+      const lit=Math.round(SEGS*cur/100);
+      segEls.forEach((s,idx)=>{s.classList.toggle('on',idx<lit);s.classList.toggle('tip',idx===lit-1);});
+      minibar.style.width=cur+'%';
+    }, 28);
+  }
+
+  // reveal list items staggered
+  document.querySelectorAll('#list .li').forEach(li=>{
+    const d=+li.dataset.d;
+    setTimeout(()=>li.classList.add('show'), d*260);
+  });
+}
+
+// start the render loop (after all UI functions are defined)
+animate();
+
+</script>
+</body>
+</html>
