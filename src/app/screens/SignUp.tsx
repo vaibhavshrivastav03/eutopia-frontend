@@ -11,13 +11,29 @@ type FieldProps = {
   type?: string;
   placeholder?: string;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement
+    >
+  ) => void;
   children?: React.ReactNode;
+  as?: "input" | "select";
+  options?: string[];
 };
 
-function Field({ id, label, type = 'text', placeholder, value, onChange, children }: FieldProps) {
+function Field({
+  id,
+  label,
+  type = "text",
+  placeholder,
+  value,
+  onChange,
+  children,
+  as = "input",
+  options = [],
+}: FieldProps) {
   return (
-    <div className="mb-3.5">
+    <div className="mb-2.5">
       <label
         htmlFor={id}
         className="block text-[10px] tracking-[0.3em] text-slate-400 uppercase mb-1.5"
@@ -26,6 +42,32 @@ function Field({ id, label, type = 'text', placeholder, value, onChange, childre
         {label}
       </label>
       <div className="relative">
+      {as === "select" ? (
+        <select
+          id={id}
+          name={id}
+          value={value}
+          onChange={onChange as any}
+          required
+          className="w-full bg-white border-[1.5px] border-slate-200 focus:border-[#87CEEB] focus:ring-4 focus:ring-blue-100 focus:outline-none rounded-xl px-4 py-2.5 text-[15px] text-black transition-all shadow-sm"
+          style={{
+            fontFamily: "Outfit, sans-serif",
+          }}
+        >
+          <option value="">
+            Select {label}
+          </option>
+
+          {options?.map((option) => (
+            <option
+              key={option}
+              value={option}
+            >
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
         <input
           id={id}
           name={id}
@@ -35,10 +77,14 @@ function Field({ id, label, type = 'text', placeholder, value, onChange, childre
           placeholder={placeholder}
           required
           className="w-full bg-white border-[1.5px] border-slate-200 focus:border-[#87CEEB] focus:ring-4 focus:ring-blue-100 focus:outline-none rounded-xl px-4 py-2.5 pr-12 text-[15px] text-black placeholder:text-slate-300 transition-all shadow-sm"
-          style={{ fontFamily: 'Outfit, sans-serif' }}
+          style={{
+            fontFamily: "Outfit, sans-serif",
+          }}
         />
-        {children}
-      </div>
+      )}
+
+      {children}
+    </div>
     </div>
   );
 }
@@ -50,15 +96,25 @@ export function SignUp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    password: '',
+    fullName: "",
+    email: "",
+    phone: "",
+    age: "",
+    bloodGroup: "",
+    address: "",
+    password: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+ const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement
+    >
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };  
 
   const handleSignUp = async (
   e: React.FormEvent
@@ -72,19 +128,28 @@ export function SignUp() {
 
     const response =
       await registerUser({
-        full_name:
-          formData.fullName,
+        full_name: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        password:
-          formData.password,
-        role: 'user'
+        age: Number(formData.age),
+        blood_group: formData.bloodGroup,
+        address: formData.address,
+        password: formData.password,
+        role: "user",
       });
 
     if (response.success) {
-      navigate(
-        '/onboarding/introduction'
+      localStorage.setItem(
+        "token",
+        response.token
       );
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(response.user)
+      );
+
+      navigate("/onboarding/introduction");
     }
   } catch (err: any) {
     setError(
@@ -98,8 +163,11 @@ export function SignUp() {
 
   return (
     <div
-      className="min-h-full flex-1 flex flex-col px-7 pt-6 pb-8"
-      style={{ background: 'radial-gradient(120% 80% at 50% 0%, #eef4ff 0%, #ffffff 55%)' }}
+      className="h-full flex-1 flex flex-col overflow-y-auto no-scrollbar px-7 pt-6 pb-8"
+      style={{
+        background:
+          "radial-gradient(120% 80% at 50% 0%, #eef4ff 0%, #ffffff 55%)",
+      }}
     >
       {/* Top bar */}
       <motion.div
@@ -129,7 +197,7 @@ export function SignUp() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15, duration: 0.6, ease: 'easeOut' }}
-        className="mt-5"
+        className="mt-3"
       >
         <p
           className="text-[11px] tracking-[0.35em] text-blue-700 uppercase mb-2"
@@ -152,8 +220,8 @@ export function SignUp() {
         onSubmit={handleSignUp}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
-        className="mt-5"
+        transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+        className="mt-3 flex flex-col flex-1"
       >
         <Field
           id="fullName"
@@ -176,6 +244,38 @@ export function SignUp() {
           type="tel"
           placeholder="+234 ___ ___ ____"
           value={formData.phone}
+          onChange={handleChange}
+        />
+        <Field
+          id="age"
+          label="Age"
+          type="number"
+          placeholder="12"
+          value={formData.age}
+          onChange={handleChange}
+        />
+        <Field
+          id="bloodGroup"
+          label="Blood Group"
+          as="select"
+          value={formData.bloodGroup}
+          onChange={handleChange}
+          options={[
+            "A+",
+            "A-",
+            "B+",
+            "B-",
+            "AB+",
+            "AB-",
+            "O+",
+            "O-",
+          ]}
+        />
+        <Field
+          id="address"
+          label="Location"
+          placeholder="Abuja, Nigeria"
+          value={formData.address}
           onChange={handleChange}
         />
         <Field

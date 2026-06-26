@@ -140,7 +140,7 @@ const handleLogout = () => {
               <Contact size={18} />
               <span className="text-[14px]">Emergency Contact</span>
             </div>
-            <span className="font-bold text-[14px] text-slate-900">{emergencyContact
+            <span className="font-bold text-[14px] text-right text-slate-900">{emergencyContact
   ? `${emergencyContact.contact_name} (${emergencyContact.contact_phone})`
   : "No Contact Added"}</span>
           </div>

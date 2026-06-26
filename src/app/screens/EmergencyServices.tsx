@@ -20,6 +20,12 @@ export function EmergencyServices() {
     setTimeout(() => navigate("/ambulance-tracking"), 400);
   };
 
+  const userData = JSON.parse(
+    localStorage.getItem("scannedUser") || "{}"
+  );
+
+  const patient = userData.users || {};
+
   const handleCallFire = () => {
     if (callingAmbulance || callingFire) return;
     SoundEngine.playSwoosh();
@@ -56,7 +62,7 @@ export function EmergencyServices() {
       {/* Location Bar */}
       <div className="bg-[#256b9a] z-10 relative h-[46px] flex items-center justify-center border-y border-[#314a6a]/50 shadow-inner">
         <MapPin size={14} className="text-[#58F210] mr-2" />
-        <span className="text-[#d1d5db] text-[14px]">Current Location: <strong className="text-white">ABUJA, FCT</strong></span>
+        <span className="text-[#d1d5db] text-[14px]">Current Location: <strong className="text-white">{patient.address || "Location Unavailable"}</strong></span>
       </div>
 
       {/* Main Content */}

@@ -5,6 +5,11 @@ import imgBgPattern from "figma:asset/c21f25bdfa9378944b010dd50361a71faac4e7ed.p
 
 export function RequestSent() {
   const navigate = useNavigate();
+  const userData = JSON.parse(
+    localStorage.getItem("scannedUser") || "{}"
+  );
+
+  const patient = userData.users || {};
 
   return (
     <div 
@@ -46,7 +51,7 @@ export function RequestSent() {
               </div>
               <div className="flex flex-col">
                 <span className="text-slate-400 text-[12px]">Blood Type</span>
-                <span className="font-bold text-[18px] text-slate-900 leading-none mt-0.5">O+</span>
+                <span className="font-bold text-[18px] text-slate-900 leading-none mt-0.5">{patient.blood_group || "N/A"}</span>
               </div>
             </div>
 
