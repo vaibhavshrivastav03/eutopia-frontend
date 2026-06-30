@@ -142,7 +142,11 @@ export function MedicalInfo() {
           className="text-center text-[12px] leading-relaxed mb-6"
           style={{ fontFamily: 'Space Grotesk, monospace', color: '#42506A' }}
         >
-          Does Zara have any medical history?
+          Does{" "}
+  <span className="font-semibold">
+    {child?.full_name || "your child"}
+  </span>{" "}
+  have any medical history?
         </motion.p>
 
         {/* 2×2 grid of glass tiles */}
